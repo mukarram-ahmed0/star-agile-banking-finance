@@ -1,0 +1,63 @@
+pipeline {
+  agent any
+
+  tools {
+    maven 'M2_HOME'
+    }
+  
+  stages {
+    stage('Checkout') {
+      steps {
+        echo 'Checkout the source code from GitHub'
+        git branch: 'master', url: 'https://github.com/mukarram-ahmed0/star-agile-banking-finance.git'
+            }
+    }
+    stage('Package')  {
+      steps {
+        echo 'Create Package'
+        sh 'mvn clean package'
+            }
+        }
+    stage('Publish Test Reports')  {
+      steps {
+         publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '/var/lib/jenkins/workspace/banking/target/surefire-reports', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            }
+        }
+    stage('Create Image from the package')  {
+      steps  {
+         echo 'Docker image is being created'
+         sh 'docker build -t star306star306/banking:01 .'
+             }
+        }
+     stage('Docker Hub login')  {
+      steps  {
+         echo 'Login to Docker hub to push the image'
+         withCredentials([usernamePassword(credentialsId: 'DockerLoginuser', passwordVariable: 'dockerpassword', usernameVariable: 'dockerlogin')]) {
+         sh 'docker login -u ${dockerlogin} -p ${dockerpassword}'
+               }
+             }
+          }
+    stage('Push Image to Docker Hub')  {
+      steps  {
+         echo 'Push Image to Docker Hub'
+         sh 'docker push star306star306/banking:01'
+             }
+        }
+    
+     stage('Create Infrastructure using terraform') {
+      steps {
+            dir('scripts') {
+            sh 'sudo chmod 600 learnawskey.pem'
+            withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'jenkinsIAMuser', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+            sh 'terraform init'
+            sh 'terraform validate'
+            sh 'terraform apply --auto-approve'
+                      }
+                 }
+            }
+        }
+
+    }
+}
+
+    
