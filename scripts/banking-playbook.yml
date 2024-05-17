@@ -10,7 +10,7 @@
     command : sudo yum install docker -y
 
   - name : Start Docker Service
-    command : sudo systemctl start docker
+    command : sudo systemctl restart docker
 
   - name : Run the Bank application
     command: sudo docker run -idt -p 8085:8081 star306star306/banking:01
